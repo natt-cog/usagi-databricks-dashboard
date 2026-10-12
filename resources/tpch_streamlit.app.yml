@@ -1,0 +1,11 @@
+resources:
+  apps:
+    tpch_streamlit:
+      name: devin-tpch-dashboard
+      description: "[Devin 作成] 受注・売上ダッシュボード（Streamlit 版）"
+      source_code_path: ../src/app
+      resources:
+        - name: sql-warehouse
+          sql_warehouse:
+            id: ${var.warehouse_id}
+            permission: CAN_USE

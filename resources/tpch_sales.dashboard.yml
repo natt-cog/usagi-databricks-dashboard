@@ -1,0 +1,7 @@
+resources:
+  dashboards:
+    tpch_sales:
+      display_name: "[Devin 作成] 受注・売上ダッシュボード（TPC-H サンプル）"
+      file_path: ../src/dashboards/tpch_sales.lvdash.json
+      warehouse_id: ${var.warehouse_id}
+      parent_path: /Workspace/Users/${workspace.current_user.userName}

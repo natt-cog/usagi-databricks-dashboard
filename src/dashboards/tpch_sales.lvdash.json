@@ -1,0 +1,850 @@
+{
+  "datasets": [
+    {
+      "name": "orders",
+      "displayName": "受注明細（顧客・地域付き）",
+      "queryLines": [
+        "SELECT\n",
+        "  o.o_orderkey AS order_key,\n",
+        "  o.o_orderdate AS order_date,\n",
+        "  o.o_totalprice AS total_price,\n",
+        "  CASE o.o_orderstatus WHEN 'F' THEN '出荷済' WHEN 'O' THEN '未出荷' WHEN 'P' THEN '一部出荷' END AS order_status,\n",
+        "  o.o_orderpriority AS order_priority,\n",
+        "  o.o_custkey AS customer_key,\n",
+        "  CASE c.c_mktsegment WHEN 'BUILDING' THEN '建設' WHEN 'MACHINERY' THEN '機械' WHEN 'AUTOMOBILE' THEN '自動車' WHEN 'HOUSEHOLD' THEN '家庭用品' WHEN 'FURNITURE' THEN '家具' END AS segment,\n",
+        "  n.n_name AS nation,\n",
+        "  CASE r.r_name WHEN 'AFRICA' THEN 'アフリカ' WHEN 'AMERICA' THEN '米州' WHEN 'ASIA' THEN 'アジア' WHEN 'EUROPE' THEN '欧州' WHEN 'MIDDLE EAST' THEN '中東' END AS region\n",
+        "FROM samples.tpch.orders o\n",
+        "JOIN samples.tpch.customer c ON o.o_custkey = c.c_custkey\n",
+        "JOIN samples.tpch.nation n ON c.c_nationkey = n.n_nationkey\n",
+        "JOIN samples.tpch.region r ON n.n_regionkey = r.r_regionkey\n",
+        "WHERE o.o_orderdate < DATE'1998-08-01'\n"
+      ]
+    },
+    {
+      "name": "shipping",
+      "displayName": "出荷モード別 月次実績",
+      "queryLines": [
+        "SELECT\n",
+        "  date_trunc('MONTH', l_shipdate) AS ship_month,\n",
+        "  l_shipmode AS ship_mode,\n",
+        "  count(*) AS line_count,\n",
+        "  sum(l_extendedprice * (1 - l_discount)) AS net_revenue,\n",
+        "  sum(CASE WHEN l_receiptdate > l_commitdate THEN 1 ELSE 0 END) AS late_count\n",
+        "FROM samples.tpch.lineitem\n",
+        "WHERE l_shipdate < DATE'1998-08-01'\n",
+        "GROUP BY ALL\n"
+      ]
+    },
+    {
+      "name": "top_customers",
+      "displayName": "顧客別売上",
+      "queryLines": [
+        "SELECT\n",
+        "  c.c_name AS customer_name,\n",
+        "  n.n_name AS nation,\n",
+        "  CASE r.r_name WHEN 'AFRICA' THEN 'アフリカ' WHEN 'AMERICA' THEN '米州' WHEN 'ASIA' THEN 'アジア' WHEN 'EUROPE' THEN '欧州' WHEN 'MIDDLE EAST' THEN '中東' END AS region,\n",
+        "  CASE c.c_mktsegment WHEN 'BUILDING' THEN '建設' WHEN 'MACHINERY' THEN '機械' WHEN 'AUTOMOBILE' THEN '自動車' WHEN 'HOUSEHOLD' THEN '家庭用品' WHEN 'FURNITURE' THEN '家具' END AS segment,\n",
+        "  count(*) AS order_count,\n",
+        "  sum(o.o_totalprice) AS revenue\n",
+        "FROM samples.tpch.orders o\n",
+        "JOIN samples.tpch.customer c ON o.o_custkey = c.c_custkey\n",
+        "JOIN samples.tpch.nation n ON c.c_nationkey = n.n_nationkey\n",
+        "JOIN samples.tpch.region r ON n.n_regionkey = r.r_regionkey\n",
+        "WHERE o.o_orderdate < DATE'1998-08-01'\n",
+        "GROUP BY ALL\n",
+        "ORDER BY revenue DESC\n",
+        "LIMIT 100\n"
+      ]
+    }
+  ],
+  "pages": [
+    {
+      "name": "overview",
+      "displayName": "概要",
+      "pageType": "PAGE_TYPE_CANVAS",
+      "layout": [
+        {
+          "widget": {
+            "name": "title",
+            "multilineTextboxSpec": {
+              "lines": [
+                "# 受注・売上ダッシュボード（サンプル） — Built by Devin\n",
+                "**このダッシュボードは Devin（Cognition AI の AI ソフトウェアエンジニア）が Databricks API 経由で自動作成しました。**\n",
+                "\n",
+                "Databricks 組み込みサンプル `samples.tpch`（1992/01〜1998/07 の受注 約 750 万件）を可視化しています。"
+              ]
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 0,
+            "width": 6,
+            "height": 2
+          }
+        },
+        {
+          "widget": {
+            "name": "f_date",
+            "queries": [
+              {
+                "name": "filter_f_date_orders",
+                "query": {
+                  "datasetName": "orders",
+                  "fields": [
+                    {
+                      "name": "order_date",
+                      "expression": "`order_date`"
+                    },
+                    {
+                      "name": "order_date_associativity",
+                      "expression": "COUNT_IF(`associative_filter_predicate_group`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "filter-date-range-picker",
+              "encodings": {
+                "fields": [
+                  {
+                    "fieldName": "order_date",
+                    "displayName": "受注日",
+                    "queryName": "filter_f_date_orders"
+                  }
+                ]
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "受注日"
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 2,
+            "width": 2,
+            "height": 1
+          }
+        },
+        {
+          "widget": {
+            "name": "f_region",
+            "queries": [
+              {
+                "name": "filter_f_region_orders",
+                "query": {
+                  "datasetName": "orders",
+                  "fields": [
+                    {
+                      "name": "region",
+                      "expression": "`region`"
+                    },
+                    {
+                      "name": "region_associativity",
+                      "expression": "COUNT_IF(`associative_filter_predicate_group`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "filter_f_region_top_customers",
+                "query": {
+                  "datasetName": "top_customers",
+                  "fields": [
+                    {
+                      "name": "region",
+                      "expression": "`region`"
+                    },
+                    {
+                      "name": "region_associativity",
+                      "expression": "COUNT_IF(`associative_filter_predicate_group`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "filter-multi-select",
+              "encodings": {
+                "fields": [
+                  {
+                    "fieldName": "region",
+                    "displayName": "地域",
+                    "queryName": "filter_f_region_orders"
+                  },
+                  {
+                    "fieldName": "region",
+                    "displayName": "地域",
+                    "queryName": "filter_f_region_top_customers"
+                  }
+                ]
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "地域"
+              }
+            }
+          },
+          "position": {
+            "x": 2,
+            "y": 2,
+            "width": 2,
+            "height": 1
+          }
+        },
+        {
+          "widget": {
+            "name": "f_segment",
+            "queries": [
+              {
+                "name": "filter_f_segment_orders",
+                "query": {
+                  "datasetName": "orders",
+                  "fields": [
+                    {
+                      "name": "segment",
+                      "expression": "`segment`"
+                    },
+                    {
+                      "name": "segment_associativity",
+                      "expression": "COUNT_IF(`associative_filter_predicate_group`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "filter_f_segment_top_customers",
+                "query": {
+                  "datasetName": "top_customers",
+                  "fields": [
+                    {
+                      "name": "segment",
+                      "expression": "`segment`"
+                    },
+                    {
+                      "name": "segment_associativity",
+                      "expression": "COUNT_IF(`associative_filter_predicate_group`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "filter-multi-select",
+              "encodings": {
+                "fields": [
+                  {
+                    "fieldName": "segment",
+                    "displayName": "市場セグメント",
+                    "queryName": "filter_f_segment_orders"
+                  },
+                  {
+                    "fieldName": "segment",
+                    "displayName": "市場セグメント",
+                    "queryName": "filter_f_segment_top_customers"
+                  }
+                ]
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "市場セグメント"
+              }
+            }
+          },
+          "position": {
+            "x": 4,
+            "y": 2,
+            "width": 2,
+            "height": 1
+          }
+        },
+        {
+          "widget": {
+            "name": "c_revenue",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "orders",
+                  "fields": [
+                    {
+                      "name": "sum(total_price)",
+                      "expression": "SUM(`total_price`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "counter",
+              "encodings": {
+                "value": {
+                  "fieldName": "sum(total_price)",
+                  "displayName": "総売上 (USD)"
+                }
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "総売上 (USD)"
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 3,
+            "width": 2,
+            "height": 2
+          }
+        },
+        {
+          "widget": {
+            "name": "c_orders",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "orders",
+                  "fields": [
+                    {
+                      "name": "count(order_key)",
+                      "expression": "COUNT(`order_key`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "counter",
+              "encodings": {
+                "value": {
+                  "fieldName": "count(order_key)",
+                  "displayName": "受注件数"
+                }
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "受注件数"
+              }
+            }
+          },
+          "position": {
+            "x": 2,
+            "y": 3,
+            "width": 2,
+            "height": 2
+          }
+        },
+        {
+          "widget": {
+            "name": "c_customers",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "orders",
+                  "fields": [
+                    {
+                      "name": "countdistinct(customer_key)",
+                      "expression": "COUNT(DISTINCT `customer_key`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "counter",
+              "encodings": {
+                "value": {
+                  "fieldName": "countdistinct(customer_key)",
+                  "displayName": "購入顧客数"
+                }
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "購入顧客数"
+              }
+            }
+          },
+          "position": {
+            "x": 4,
+            "y": 3,
+            "width": 2,
+            "height": 2
+          }
+        },
+        {
+          "widget": {
+            "name": "monthly_revenue",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "orders",
+                  "fields": [
+                    {
+                      "name": "monthly(order_date)",
+                      "expression": "DATE_TRUNC(\"MONTH\", `order_date`)"
+                    },
+                    {
+                      "name": "region",
+                      "expression": "`region`"
+                    },
+                    {
+                      "name": "sum(total_price)",
+                      "expression": "SUM(`total_price`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 3,
+              "widgetType": "line",
+              "encodings": {
+                "x": {
+                  "fieldName": "monthly(order_date)",
+                  "displayName": "受注月",
+                  "scale": {
+                    "type": "temporal"
+                  }
+                },
+                "y": {
+                  "fieldName": "sum(total_price)",
+                  "displayName": "売上 (USD)",
+                  "scale": {
+                    "type": "quantitative"
+                  }
+                },
+                "color": {
+                  "fieldName": "region",
+                  "displayName": "地域",
+                  "scale": {
+                    "type": "categorical"
+                  }
+                }
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "月次売上推移（地域別）"
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 5,
+            "width": 6,
+            "height": 6
+          }
+        },
+        {
+          "widget": {
+            "name": "revenue_by_region",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "orders",
+                  "fields": [
+                    {
+                      "name": "region",
+                      "expression": "`region`"
+                    },
+                    {
+                      "name": "sum(total_price)",
+                      "expression": "SUM(`total_price`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 3,
+              "widgetType": "bar",
+              "encodings": {
+                "x": {
+                  "fieldName": "region",
+                  "displayName": "地域",
+                  "scale": {
+                    "type": "categorical"
+                  }
+                },
+                "y": {
+                  "fieldName": "sum(total_price)",
+                  "displayName": "売上 (USD)",
+                  "scale": {
+                    "type": "quantitative"
+                  }
+                },
+                "label": {
+                  "show": true
+                }
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "地域別売上"
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 11,
+            "width": 3,
+            "height": 6
+          }
+        },
+        {
+          "widget": {
+            "name": "revenue_by_segment",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "orders",
+                  "fields": [
+                    {
+                      "name": "segment",
+                      "expression": "`segment`"
+                    },
+                    {
+                      "name": "sum(total_price)",
+                      "expression": "SUM(`total_price`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 3,
+              "widgetType": "bar",
+              "encodings": {
+                "x": {
+                  "fieldName": "segment",
+                  "displayName": "セグメント",
+                  "scale": {
+                    "type": "categorical"
+                  }
+                },
+                "y": {
+                  "fieldName": "sum(total_price)",
+                  "displayName": "売上 (USD)",
+                  "scale": {
+                    "type": "quantitative"
+                  }
+                },
+                "label": {
+                  "show": true
+                }
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "市場セグメント別売上"
+              }
+            }
+          },
+          "position": {
+            "x": 3,
+            "y": 11,
+            "width": 3,
+            "height": 6
+          }
+        },
+        {
+          "widget": {
+            "name": "orders_by_priority",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "orders",
+                  "fields": [
+                    {
+                      "name": "order_priority",
+                      "expression": "`order_priority`"
+                    },
+                    {
+                      "name": "count(order_key)",
+                      "expression": "COUNT(`order_key`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 3,
+              "widgetType": "pie",
+              "encodings": {
+                "angle": {
+                  "fieldName": "count(order_key)",
+                  "displayName": "受注件数",
+                  "scale": {
+                    "type": "quantitative"
+                  }
+                },
+                "color": {
+                  "fieldName": "order_priority",
+                  "displayName": "優先度",
+                  "scale": {
+                    "type": "categorical"
+                  }
+                },
+                "label": {
+                  "show": true
+                }
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "受注優先度の構成"
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 17,
+            "width": 3,
+            "height": 6
+          }
+        },
+        {
+          "widget": {
+            "name": "orders_by_status",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "orders",
+                  "fields": [
+                    {
+                      "name": "order_status",
+                      "expression": "`order_status`"
+                    },
+                    {
+                      "name": "count(order_key)",
+                      "expression": "COUNT(`order_key`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 3,
+              "widgetType": "bar",
+              "encodings": {
+                "x": {
+                  "fieldName": "order_status",
+                  "displayName": "ステータス",
+                  "scale": {
+                    "type": "categorical"
+                  }
+                },
+                "y": {
+                  "fieldName": "count(order_key)",
+                  "displayName": "受注件数",
+                  "scale": {
+                    "type": "quantitative"
+                  }
+                },
+                "label": {
+                  "show": true
+                }
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "受注ステータス別件数"
+              }
+            }
+          },
+          "position": {
+            "x": 3,
+            "y": 17,
+            "width": 3,
+            "height": 6
+          }
+        },
+        {
+          "widget": {
+            "name": "late_rate_by_mode",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "shipping",
+                  "fields": [
+                    {
+                      "name": "ship_mode",
+                      "expression": "`ship_mode`"
+                    },
+                    {
+                      "name": "late_rate",
+                      "expression": "SUM(`late_count`) / SUM(`line_count`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 3,
+              "widgetType": "bar",
+              "encodings": {
+                "x": {
+                  "fieldName": "ship_mode",
+                  "displayName": "出荷モード",
+                  "scale": {
+                    "type": "categorical"
+                  }
+                },
+                "y": {
+                  "fieldName": "late_rate",
+                  "displayName": "遅延率",
+                  "scale": {
+                    "type": "quantitative"
+                  },
+                  "format": {
+                    "type": "number-percent",
+                    "decimalPlaces": {
+                      "type": "exact",
+                      "places": 1
+                    }
+                  }
+                },
+                "label": {
+                  "show": true
+                }
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "出荷モード別 納期遅延率"
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 23,
+            "width": 3,
+            "height": 7
+          }
+        },
+        {
+          "widget": {
+            "name": "top_customers_table",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "top_customers",
+                  "fields": [
+                    {
+                      "name": "customer_name",
+                      "expression": "`customer_name`"
+                    },
+                    {
+                      "name": "nation",
+                      "expression": "`nation`"
+                    },
+                    {
+                      "name": "region",
+                      "expression": "`region`"
+                    },
+                    {
+                      "name": "segment",
+                      "expression": "`segment`"
+                    },
+                    {
+                      "name": "order_count",
+                      "expression": "`order_count`"
+                    },
+                    {
+                      "name": "revenue",
+                      "expression": "`revenue`"
+                    }
+                  ],
+                  "disaggregated": true
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "table",
+              "encodings": {
+                "columns": [
+                  {
+                    "fieldName": "customer_name",
+                    "displayName": "顧客名"
+                  },
+                  {
+                    "fieldName": "nation",
+                    "displayName": "国"
+                  },
+                  {
+                    "fieldName": "region",
+                    "displayName": "地域"
+                  },
+                  {
+                    "fieldName": "segment",
+                    "displayName": "セグメント"
+                  },
+                  {
+                    "fieldName": "order_count",
+                    "displayName": "受注件数"
+                  },
+                  {
+                    "fieldName": "revenue",
+                    "displayName": "売上 (USD)"
+                  }
+                ]
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "売上上位顧客"
+              }
+            }
+          },
+          "position": {
+            "x": 3,
+            "y": 23,
+            "width": 3,
+            "height": 7
+          }
+        },
+        {
+          "widget": {
+            "name": "footer",
+            "multilineTextboxSpec": {
+              "lines": [
+                "---\n",
+                "作成: **Devin**（Cognition AI） / データセット・SQL・レイアウト定義はすべて Devin が生成し、Lakeview API でデプロイしています。"
+              ]
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 30,
+            "width": 6,
+            "height": 1
+          }
+        }
+      ]
+    }
+  ]
+}
